@@ -46,41 +46,30 @@ def load_label_file(label_path):
 
 def crop_text_region_simple(image, points):
     """
-    使用旋轉矩形裁剪，保持原始形狀不變形
+    使用邊界框直接裁剪，不做變換
     points: [[x1, y1], [x2, y2], [x3, y3], [x4, y4]]
     """
-    points = np.array(points, dtype=np.float32)
+    points = np.array(points, dtype=np.int32)
 
-    # 使用 cv2.minAreaRect 獲取最小外接矩形
-    rect = cv2.minAreaRect(points)
-    box = cv2.boxPoints(rect)
-    box = np.int0(box)
+    # 獲取邊界框
+    x_min = int(np.min(points[:, 0]))
+    x_max = int(np.max(points[:, 0]))
+    y_min = int(np.min(points[:, 1]))
+    y_max = int(np.max(points[:, 1]))
 
-    # 獲取矩形的寬高
-    width = int(rect[1][0])
-    height = int(rect[1][1])
+    # 確保坐標在圖片範圍內
+    h, w = image.shape[:2]
+    x_min = max(0, x_min)
+    x_max = min(w, x_max)
+    y_min = max(0, y_min)
+    y_max = min(h, y_max)
 
-    # 如果寬高為0，跳過
-    if width == 0 or height == 0:
+    # 檢查是否有效
+    if x_max <= x_min or y_max <= y_min:
         return None
 
-    # 獲取旋轉矩陣
-    center = rect[0]
-    angle = rect[2]
-
-    # 調整角度
-    if width < height:
-        angle = angle + 90
-        width, height = height, width
-
-    # 獲取旋轉矩陣
-    M = cv2.getRotationMatrix2D(center, angle, 1.0)
-
-    # 旋轉整個圖片
-    rotated = cv2.warpAffine(image, M, (image.shape[1], image.shape[0]))
-
-    # 裁剪旋轉後的矩形區域
-    cropped = cv2.getRectSubPix(rotated, (width, height), center)
+    # 直接裁剪
+    cropped = image[y_min:y_max, x_min:x_max]
 
     return cropped
 
